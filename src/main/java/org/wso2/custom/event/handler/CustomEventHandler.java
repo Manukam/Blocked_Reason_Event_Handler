@@ -32,7 +32,8 @@ public class CustomEventHandler extends AbstractEventHandler implements Identity
         Map<String, Object> eventProperties = event.getEventProperties();
         Map<String, String> claims = (Map<String, String>) eventProperties.get(IdentityEventConstants.EventProperty
                 .USER_CLAIMS);
-        Property[] identityProperties;
+        Property[] identityProperties = null;
+        int disableDelay = 0;
         UserStoreManager userStoreManager = (UserStoreManager) eventProperties.get(IdentityEventConstants.EventProperty.USER_STORE_MANAGER);
         String userName = (String) eventProperties.get(IdentityEventConstants.EventProperty.USER_NAME);
         try {
@@ -42,6 +43,14 @@ public class CustomEventHandler extends AbstractEventHandler implements Identity
            log.error("Error while reading the configurations");
         }
 
+        for (Property identityProperty : identityProperties) {
+            if (identityProperty == null) {
+                continue;
+            }
+            if(ACCOUNT_DISABLE_DELAY.equals(identityProperty.getName())){
+                disableDelay = Integer.parseInt(identityProperty.getValue());
+            }
+        }
         boolean isAccountDisabled = true;
         String blockedReason = null;
         try {
@@ -53,7 +62,7 @@ public class CustomEventHandler extends AbstractEventHandler implements Identity
             log.error("Error when retrieving the User claims");
         }
         if (isAccountDisabled && blockedReason.isEmpty()) {
-            if (isAccountIdle(Integer.parseInt(claims.get(LAST_LOGIN_TIME)),0)){
+            if (isAccountIdle(Integer.parseInt(claims.get(LAST_LOGIN_TIME)), disableDelay)){
                 blockedReason = "IDLE";
             } else if (Long.parseLong(claims.get(PASSWORD_EXPIRY)) > CONFIGURED_IDLE_ACTIVITY_TIME) {
                 blockedReason = "PASSWORD_EXPIRY";
