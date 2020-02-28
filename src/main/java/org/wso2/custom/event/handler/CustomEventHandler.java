@@ -37,17 +37,19 @@ public class CustomEventHandler extends AbstractEventHandler implements Identity
         UserStoreManager userStoreManager = (UserStoreManager) eventProperties.get(IdentityEventConstants.EventProperty.USER_STORE_MANAGER);
         String userName = (String) eventProperties.get(IdentityEventConstants.EventProperty.USER_NAME);
         try {
-            identityProperties = BlockedReasonTaskDataHolder.getInstance().getIdentityGovernanceService()
-                    .getConfiguration(getPropertyNames(), (String)eventProperties.get(IdentityEventConstants.EventProperty.TENANT_DOMAIN));
+            if(identityProperties == null) {
+                identityProperties = BlockedReasonTaskDataHolder.getInstance().getIdentityGovernanceService()
+                        .getConfiguration(getPropertyNames(), (String) eventProperties.get(IdentityEventConstants.EventProperty.TENANT_DOMAIN));
+            }
         } catch (IdentityGovernanceException e) {
-           log.error("Error while reading the configurations");
+            log.error("Error while reading the configurations");
         }
 
         for (Property identityProperty : identityProperties) {
             if (identityProperty == null) {
                 continue;
             }
-            if(ACCOUNT_DISABLE_DELAY.equals(identityProperty.getName())){
+            if (ACCOUNT_DISABLE_DELAY.equals(identityProperty.getName())) {
                 disableDelay = Integer.parseInt(identityProperty.getValue());
             }
         }
@@ -62,7 +64,7 @@ public class CustomEventHandler extends AbstractEventHandler implements Identity
             log.error("Error when retrieving the User claims");
         }
         if (isAccountDisabled && blockedReason.isEmpty()) {
-            if (isAccountIdle(Integer.parseInt(claims.get(LAST_LOGIN_TIME)), disableDelay)){
+            if (isAccountIdle(Integer.parseInt(claims.get(LAST_LOGIN_TIME)), disableDelay)) {
                 blockedReason = "IDLE";
             } else if (Long.parseLong(claims.get(PASSWORD_EXPIRY)) > CONFIGURED_IDLE_ACTIVITY_TIME) {
                 blockedReason = "PASSWORD_EXPIRY";
@@ -132,7 +134,7 @@ public class CustomEventHandler extends AbstractEventHandler implements Identity
 
     private boolean isAccountIdle(int lastLogin, int delay) {
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-        int diffInDays = (int)(timestamp.getTime() - lastLogin) / (1000 * 60 * 60 * 24);
-        return delay > diffInDays;
+        int diffInDays = (int) (timestamp.getTime() - lastLogin) / (1000 * 60 * 60 * 24);
+        return diffInDays > delay;
     }
 }
